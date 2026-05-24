@@ -1,0 +1,13 @@
+services:
+  stock-advisor:
+    build:
+      context: ..
+      dockerfile: stock_advisor/Dockerfile
+    image: stock-advisor:latest
+    container_name: stock-advisor
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./config.json:/app/config/config.json:ro
+      - ./reports:/app/reports

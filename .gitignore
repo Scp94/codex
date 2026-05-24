@@ -3,3 +3,6 @@ __pycache__/
 .venv/
 venv/
 snake/leaderboard.json
+stock_advisor/config.json
+stock_advisor/reports/
+.env
