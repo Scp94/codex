@@ -1,0 +1,20 @@
+services:
+  fund-advisor:
+    build:
+      context: ..
+      dockerfile: stock_advisor/Dockerfile
+    image: fund-advisor:latest
+    container_name: fund-advisor
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      STOCK_ADVISOR_CONFIG: /app/config/config.json
+      STOCK_ADVISOR_OUTPUT_DIR: /app/reports
+      STOCK_ADVISOR_DAILY_RUN_TIME: "${STOCK_ADVISOR_DAILY_RUN_TIME:-09:30}"
+      STOCK_ADVISOR_API_TOKEN: "${STOCK_ADVISOR_API_TOKEN:?set STOCK_ADVISOR_API_TOKEN before starting}"
+    ports:
+      - "80:8000"
+      - "8000:8000"
+    volumes:
+      - ./config.json:/app/config/config.json
+      - ./reports:/app/reports

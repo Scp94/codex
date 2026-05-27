@@ -2,3 +2,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+snake/leaderboard.json
+stock_advisor/config.json
+stock_advisor/reports/
+.env
