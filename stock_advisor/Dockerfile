@@ -1,4 +1,4 @@
-FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.11-slim
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ --trus
 
 COPY stock_advisor ./stock_advisor
 
-CMD ["python", "-m", "stock_advisor.scheduler", "--config", "/app/config/config.json", "--output-dir", "/app/reports", "--time", "09:30"]
+CMD ["uvicorn", "stock_advisor.api:app", "--host", "0.0.0.0", "--port", "8000"]

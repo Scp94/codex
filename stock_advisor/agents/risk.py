@@ -55,9 +55,11 @@ class RiskAgent:
                 if action == "观察买入":
                     room_pct = max(0, risk_profile.max_single_position_pct - current_pct)
                     add_pct = min(risk_profile.max_new_position_pct, room_pct)
-                    trade_plan = f"如确认数据无误，可考虑加仓不超过组合 {add_pct:.1f}%。"
+                    trade_plan = f"可考虑分批加仓，单日追加不超过组合 {add_pct:.1f}%。"
                 elif action == "持有/观察":
-                    trade_plan = "已有持仓可继续持有，暂不加仓。"
+                    trade_plan = "已有持仓可继续持有，暂不追加。"
+                elif action == "谨慎/减仓":
+                    trade_plan = "可考虑分批赎回或暂停新增，避免一次性操作。"
             else:
                 position_note = (
                     f"如新开仓，建议不超过组合 {risk_profile.max_new_position_pct:.1f}%"
@@ -65,9 +67,9 @@ class RiskAgent:
                 if action == "观察买入":
                     available_cash_pct = max(0, portfolio.cash_pct - risk_profile.min_cash_pct)
                     buy_pct = min(risk_profile.max_new_position_pct, available_cash_pct)
-                    trade_plan = f"如确认适合你的风险偏好，可考虑试探建仓不超过组合 {buy_pct:.1f}%。"
+                    trade_plan = f"可考虑小额试投，首次买入不超过组合 {buy_pct:.1f}%。"
                 elif action == "谨慎/减仓":
-                    trade_plan = "未持有则不建议新开仓。"
+                    trade_plan = "未持有则暂不建议买入。"
 
             recommendations.append(
                 Recommendation(
@@ -81,4 +83,7 @@ class RiskAgent:
                     trade_plan=trade_plan,
                 )
             )
-        return sorted(recommendations, key=lambda rec: rec.score, reverse=True)
+        return sorted(
+            recommendations,
+            key=lambda rec: (rec.symbol not in held_symbols, -rec.score),
+        )

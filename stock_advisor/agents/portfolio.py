@@ -16,7 +16,12 @@ class PortfolioAgent:
         for position in positions:
             snapshot = market_data.get(position.symbol)
             if snapshot:
-                values[position.symbol] = position.shares * snapshot.price
+                if position.shares > 0:
+                    values[position.symbol] = position.shares * snapshot.price
+                elif position.principal > 0 and position.cost_basis > 0:
+                    values[position.symbol] = (
+                        position.principal / position.cost_basis * snapshot.price
+                    )
 
         total_value = cash + sum(values.values())
         cash_pct = cash / total_value * 100 if total_value else 100

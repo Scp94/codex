@@ -34,7 +34,7 @@ class DingTalkNotifier:
         payload = {
             "msgtype": "markdown",
             "markdown": {
-                "title": "每日股票投研简报",
+                "title": "每日基金理财简报",
                 "text": markdown,
             },
         }

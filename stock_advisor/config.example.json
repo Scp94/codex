@@ -4,34 +4,39 @@
     "cash": 10000,
     "positions": [
       {
-        "symbol": "600519.SH",
-        "shares": 10,
-        "cost_basis": 1650
+        "symbol": "014597",
+        "principal": 50000,
+        "shares": 0,
+        "cost_basis": 2.8194
       },
       {
-        "symbol": "300750.SZ",
-        "shares": 20,
-        "cost_basis": 190
+        "symbol": "007509",
+        "principal": 2000,
+        "shares": 0,
+        "cost_basis": 4.4888,
+        "weekly_dca_day": "周二",
+        "dca_min": 1000,
+        "dca_max": 4000
       }
     ]
   },
   "watchlist": [],
   "universe": [
-    {"symbol": "600519.SH", "name": "贵州茅台"},
-    {"symbol": "300750.SZ", "name": "宁德时代"},
-    {"symbol": "000858.SZ", "name": "五粮液"},
-    {"symbol": "600036.SH", "name": "招商银行"},
-    {"symbol": "000333.SZ", "name": "美的集团"},
-    {"symbol": "002594.SZ", "name": "比亚迪"},
-    {"symbol": "601318.SH", "name": "中国平安"},
-    {"symbol": "600276.SH", "name": "恒瑞医药"}
+    {"symbol": "014597", "name": "华泰柏瑞富利混合C"},
+    {"symbol": "007509", "name": "华商润丰灵活配置混合C"},
+    {"symbol": "110020", "name": "易方达沪深300ETF联接A"},
+    {"symbol": "000083", "name": "汇添富消费行业混合"},
+    {"symbol": "003096", "name": "中欧医疗健康混合C"},
+    {"symbol": "161725", "name": "招商中证白酒指数(LOF)A"},
+    {"symbol": "005827", "name": "易方达蓝筹精选混合"},
+    {"symbol": "008888", "name": "华夏国证半导体芯片ETF联接C"}
   ],
   "risk_profile": {
     "style": "balanced",
-    "max_single_position_pct": 25,
+    "max_single_position_pct": 45,
     "max_new_position_pct": 10,
     "min_cash_pct": 10,
-    "target_invested_pct": 80
+    "target_invested_pct": 85
   },
   "notifications": {
     "dingtalk": {
@@ -42,98 +47,24 @@
     }
   },
   "market_data": {
-    "provider": "sample",
-    "use_realtime_spot": false,
+    "provider": "akshare_fund",
     "sample_prices": {
-      "600519.SH": {
-        "price": 1680,
-        "previous_close": 1660,
-        "volume_vs_20d": 1.1,
-        "rsi": 55,
-        "pe": 27
+      "014597": {
+        "price": 2.7154,
+        "previous_close": 2.6864,
+        "as_of_date": "2026-05-22",
+        "return_20d_pct": -2.5
       },
-      "300750.SZ": {
-        "price": 205,
-        "previous_close": 198,
-        "volume_vs_20d": 1.7,
-        "rsi": 64,
-        "pe": 22
-      },
-      "000858.SZ": {
-        "price": 135,
-        "previous_close": 138,
-        "volume_vs_20d": 1.0,
-        "rsi": 43,
-        "pe": 18
-      },
-      "600036.SH": {
-        "price": 37.5,
-        "previous_close": 36.8,
-        "volume_vs_20d": 1.3,
-        "rsi": 58,
-        "pe": 7
-      },
-      "000333.SZ": {
-        "price": 72,
-        "previous_close": 71,
-        "volume_vs_20d": 0.9,
-        "rsi": 54,
-        "pe": 14
-      },
-      "002594.SZ": {
-        "price": 220,
-        "previous_close": 211,
-        "volume_vs_20d": 1.9,
-        "rsi": 69,
-        "pe": 24
-      },
-      "601318.SH": {
-        "price": 48,
-        "previous_close": 49.5,
-        "volume_vs_20d": 1.5,
-        "rsi": 38,
-        "pe": 9
-      },
-      "600276.SH": {
-        "price": 43,
-        "previous_close": 44,
-        "volume_vs_20d": 1.6,
-        "rsi": 41,
-        "pe": 48
+      "007509": {
+        "price": 4.7960,
+        "previous_close": 4.7240,
+        "as_of_date": "2026-05-22",
+        "return_20d_pct": 1.2
       }
     }
   },
   "news": {
     "provider": "sample",
-    "sample_events": {
-      "600519.SH": [
-        {
-          "title": "高端白酒需求预期保持稳定",
-          "sentiment": "neutral",
-          "impact": 0
-        }
-      ],
-      "300750.SZ": [
-        {
-          "title": "新能源车产业链景气度修复",
-          "sentiment": "positive",
-          "impact": 1
-        }
-      ],
-      "002594.SZ": [
-        {
-          "title": "新能源汽车销量和出口预期改善",
-          "sentiment": "positive",
-          "impact": 1
-        }
-      ],
-      "601318.SH": [
-        {
-          "title": "保险板块短线波动加大",
-          "sentiment": "negative",
-          "impact": -1
-        }
-      ]
-    }
+    "sample_events": {}
   }
 }

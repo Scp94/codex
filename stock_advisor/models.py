@@ -7,6 +7,10 @@ class Position:
     symbol: str
     shares: float
     cost_basis: float
+    principal: float = 0
+    weekly_dca_day: Optional[str] = None
+    dca_min: float = 0
+    dca_max: float = 0
 
 
 @dataclass(frozen=True)
@@ -26,6 +30,15 @@ class MarketSnapshot:
     volume_vs_20d: float
     rsi: Optional[float] = None
     pe: Optional[float] = None
+    as_of_date: Optional[str] = None
+    return_1d_pct: Optional[float] = None
+    return_5d_pct: Optional[float] = None
+    return_20d_pct: Optional[float] = None
+    return_60d_pct: Optional[float] = None
+    volatility_20d_pct: Optional[float] = None
+    max_drawdown_60d_pct: Optional[float] = None
+    ma20_deviation_pct: Optional[float] = None
+    ma60_deviation_pct: Optional[float] = None
 
     @property
     def change_pct(self) -> float:

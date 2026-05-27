@@ -38,7 +38,7 @@ class DailyResearchOrchestrator:
             positions=positions,
             market_data=market_data,
         )
-        signals = self.signal_agent.run(symbols, market_data, news)
+        signals = self.signal_agent.run(symbols, market_data, news, positions)
         recommendations = self.risk_agent.run(signals, portfolio, risk_profile)
 
         return self.report_writer_agent.run(

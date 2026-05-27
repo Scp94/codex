@@ -16,8 +16,12 @@ def parse_positions(raw_positions: List[dict]) -> List[Position]:
     return [
         Position(
             symbol=item["symbol"].upper(),
-            shares=float(item["shares"]),
+            shares=float(item.get("shares", 0)),
             cost_basis=float(item["cost_basis"]),
+            principal=float(item.get("principal", 0)),
+            weekly_dca_day=item.get("weekly_dca_day"),
+            dca_min=float(item.get("dca_min", 0)),
+            dca_max=float(item.get("dca_max", 0)),
         )
         for item in raw_positions
     ]
@@ -35,7 +39,7 @@ def run(config_path: Path, output_dir: Path, send_dingtalk: bool = False) -> Pat
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate a local stock research report.")
+    parser = argparse.ArgumentParser(description="Generate a local fund research report.")
     parser.add_argument(
         "--config",
         type=Path,

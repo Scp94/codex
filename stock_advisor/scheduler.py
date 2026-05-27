@@ -30,7 +30,7 @@ def run_once(config_path: Path, output_dir: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the stock advisor on a daily schedule.")
+    parser = argparse.ArgumentParser(description="Run the fund advisor on a daily schedule.")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--time", default="09:30", help="Daily run time in HH:MM, Asia/Shanghai.")
@@ -43,15 +43,15 @@ def main() -> None:
         now = datetime.now(timezone)
         scheduled_at = next_run_at(now, args.time)
         sleep_seconds = max(1, int((scheduled_at - now).total_seconds()))
-        print(f"Next stock advisor run: {scheduled_at.isoformat()}", flush=True)
+        print(f"Next fund advisor run: {scheduled_at.isoformat()}", flush=True)
         time.sleep(sleep_seconds)
 
         try:
-            print(f"Starting stock advisor run: {datetime.now(timezone).isoformat()}", flush=True)
+            print(f"Starting fund advisor run: {datetime.now(timezone).isoformat()}", flush=True)
             run_once(args.config, args.output_dir)
-            print(f"Finished stock advisor run: {datetime.now(timezone).isoformat()}", flush=True)
+            print(f"Finished fund advisor run: {datetime.now(timezone).isoformat()}", flush=True)
         except Exception as exc:
-            print(f"Stock advisor run failed: {exc}", file=sys.stderr, flush=True)
+            print(f"Fund advisor run failed: {exc}", file=sys.stderr, flush=True)
 
 
 if __name__ == "__main__":
