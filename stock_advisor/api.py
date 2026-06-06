@@ -8,11 +8,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from zoneinfo import ZoneInfo
 
 from .agents import MarketDataAgent
+from .admin_page import render_admin_page, render_login_page
 from .cli import parse_positions
 from .notifiers import DingTalkNotifier
 from .orchestrator import DailyResearchOrchestrator
@@ -35,6 +37,7 @@ app = FastAPI(
     version="0.1.0",
     default_response_class=Utf8JSONResponse,
 )
+app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"), name="static")
 
 
 class FundPositionRequest(BaseModel):
@@ -129,6 +132,169 @@ def latest_nav(config: Dict[str, Any], symbol: str, fallback: float) -> float:
     return fallback
 
 
+def lookup_fund(config: Dict[str, Any], symbol: str) -> Dict[str, Any]:
+    normalized = normalize_symbol(symbol).zfill(6)
+    name = None
+    for item in config.get("universe", []):
+        item_symbol = item.get("symbol") if isinstance(item, dict) else item
+        if normalize_symbol(item_symbol).zfill(6) == normalized:
+            name = item.get("name") if isinstance(item, dict) else None
+            break
+
+    snapshot = MarketDataAgent(config.get("market_data", {})).run([normalized]).get(normalized)
+    if not name:
+        name = _lookup_fund_name_from_akshare(normalized)
+    return {
+        "symbol": normalized,
+        "name": name or normalized,
+        "price": snapshot.price if snapshot else None,
+        "previous_close": snapshot.previous_close if snapshot else None,
+        "as_of_date": snapshot.as_of_date if snapshot else None,
+        "return_20d_pct": snapshot.return_20d_pct if snapshot else None,
+    }
+
+
+def _lookup_fund_name_from_akshare(symbol: str) -> Optional[str]:
+    try:
+        import akshare as ak
+
+        frame = ak.fund_name_em()
+        for _, row in frame.iterrows():
+            data = row.to_dict()
+            code = str(data.get("基金代码") or data.get("基金简称") or "").zfill(6)
+            if code == symbol:
+                return str(data.get("基金简称") or data.get("基金名称") or "")
+    except Exception:
+        return None
+    return None
+
+
+def refresh_hot_funds(config: Dict[str, Any], limit: int = 10) -> List[Dict[str, Any]]:
+    ranked_funds = _load_ranked_funds_from_akshare()
+    funds = ranked_funds[:limit]
+    if not funds:
+        return []
+    ranked_by_symbol = {item["symbol"]: item for item in ranked_funds}
+    held_symbols = {
+        normalize_symbol(item.get("symbol", "")).zfill(6)
+        for item in config.get("portfolio", {}).get("positions", [])
+    }
+    held_universe = []
+    held_items = [
+        item for item in config.get("universe", [])
+        if normalize_symbol((item.get("symbol") if isinstance(item, dict) else item) or "").zfill(6) in held_symbols
+    ]
+    existing_held_symbols = {
+        normalize_symbol((item.get("symbol") if isinstance(item, dict) else item) or "").zfill(6)
+        for item in held_items
+    }
+    for position in config.get("portfolio", {}).get("positions", []):
+        normalized = normalize_symbol(position.get("symbol", "")).zfill(6)
+        if normalized and normalized not in existing_held_symbols:
+            held_items.append({"symbol": normalized, "name": position.get("name")})
+
+    for item in held_items:
+        item_symbol = item.get("symbol") if isinstance(item, dict) else item
+        normalized = normalize_symbol(item_symbol).zfill(6)
+        if normalized in held_symbols:
+            base = item if isinstance(item, dict) else {"symbol": normalized}
+            enriched = dict(base)
+            ranked = ranked_by_symbol.get(normalized)
+            if ranked:
+                enriched.update({key: value for key, value in ranked.items() if value not in (None, "")})
+                if base.get("name"):
+                    enriched["name"] = base["name"]
+            held_universe.append(enriched)
+    config["universe"] = held_universe + [
+        item for item in funds if item["symbol"] not in held_symbols
+    ]
+    config["universe_updated_at"] = datetime.now(ZoneInfo("Asia/Shanghai")).isoformat()
+    save_config(config)
+    return funds
+
+
+def _load_hot_funds_from_akshare(limit: int) -> List[Dict[str, Any]]:
+    return _load_ranked_funds_from_akshare()[:limit]
+
+
+def _load_ranked_funds_from_akshare() -> List[Dict[str, Any]]:
+    try:
+        import akshare as ak
+
+        frame = ak.fund_open_fund_rank_em(symbol="全部")
+    except Exception:
+        return []
+    rows = [row.to_dict() for _, row in frame.iterrows()]
+    sort_key = next(
+        (key for key in ["近1月", "近3月", "近6月", "近1年", "日增长率"] if key in rows[0]),
+        None,
+    ) if rows else None
+    if sort_key:
+        rows.sort(key=lambda row: _to_sort_float(row.get(sort_key)), reverse=True)
+
+    funds: List[Dict[str, Any]] = []
+    for row in rows:
+        code = str(row.get("基金代码") or "").zfill(6)
+        name = str(row.get("基金简称") or row.get("基金名称") or "")
+        if code and name and code != "000000":
+            funds.append(
+                {
+                    "symbol": code,
+                    "name": name,
+                    "date": str(row.get("日期") or ""),
+                    "nav": _optional_float(row.get("单位净值")),
+                    "daily_return_pct": _optional_float(row.get("日增长率")),
+                    "return_1w_pct": _optional_float(row.get("近1周")),
+                    "return_1m_pct": _optional_float(row.get("近1月")),
+                    "return_3m_pct": _optional_float(row.get("近3月")),
+                    "return_6m_pct": _optional_float(row.get("近6月")),
+                    "return_1y_pct": _optional_float(row.get("近1年")),
+                    "return_ytd_pct": _optional_float(row.get("今年来")),
+                    "fee": str(row.get("手续费") or ""),
+                }
+            )
+    return funds
+
+
+def _load_fund_history_from_akshare(symbol: str, limit: int) -> List[Dict[str, Any]]:
+    try:
+        import akshare as ak
+
+        frame = ak.fund_open_fund_info_em(symbol=symbol, indicator="单位净值走势")
+    except Exception:
+        return []
+    rows = [row.to_dict() for _, row in frame.iterrows()]
+    output = []
+    for row in rows[-limit:]:
+        nav = _optional_float(row.get("单位净值"))
+        if nav is None:
+            continue
+        output.append(
+            {
+                "date": str(row.get("净值日期") or ""),
+                "nav": nav,
+                "daily_return_pct": _optional_float(row.get("日增长率")),
+            }
+        )
+    return output
+
+
+def _to_sort_float(value: Any) -> float:
+    try:
+        return float(str(value).replace("%", ""))
+    except (TypeError, ValueError):
+        return -999999.0
+
+
+def _optional_float(value: Any) -> Optional[float]:
+    try:
+        if value is None or value == "" or str(value).lower() == "nan":
+            return None
+        return float(str(value).replace("%", ""))
+    except (TypeError, ValueError):
+        return None
+
+
 def run_analysis(send_dingtalk: bool) -> Dict[str, Any]:
     config = load_config()
     positions = parse_positions(config["portfolio"].get("positions", []))
@@ -160,6 +326,10 @@ def _daily_scheduler_loop() -> None:
             next_run += timedelta(days=1)
         time.sleep(max(1, int((next_run - now).total_seconds())))
         try:
+            try:
+                refresh_hot_funds(load_config(), limit=10)
+            except Exception as exc:
+                print(f"Scheduled hot fund refresh failed: {exc}", flush=True)
             run_analysis(send_dingtalk=True)
         except Exception as exc:
             print(f"Scheduled fund advisor run failed: {exc}", flush=True)
@@ -170,6 +340,18 @@ def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/admin/login", response_class=HTMLResponse)
+def admin_login() -> str:
+    return render_login_page()
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page(token: Optional[str] = Query(default=None)) -> str:
+    if API_TOKEN and token != API_TOKEN:
+        return render_login_page(error=bool(token))
+    return render_admin_page(token or "")
+
+
 @app.get("/portfolio", dependencies=[Depends(require_token)])
 def get_portfolio() -> Dict[str, Any]:
     config = load_config()
@@ -178,7 +360,40 @@ def get_portfolio() -> Dict[str, Any]:
         "positions": config.get("portfolio", {}).get("positions", []),
         "universe": config.get("universe", []),
         "transactions": config.get("transactions", []),
+        "price_overrides": config.get("market_data", {}).get("price_overrides", {}),
     }
+
+
+@app.get("/funds/lookup", dependencies=[Depends(require_token)])
+def lookup_fund_endpoint(
+    symbol: str = Query(..., description="基金代码"),
+) -> Dict[str, Any]:
+    return lookup_fund(load_config(), symbol)
+
+
+@app.get("/funds/hot", dependencies=[Depends(require_token)])
+def hot_funds(
+    limit: int = Query(default=10, ge=1, le=30, description="数量"),
+) -> Dict[str, Any]:
+    return {"funds": _load_hot_funds_from_akshare(limit)}
+
+
+@app.get("/funds/history", dependencies=[Depends(require_token)])
+def fund_history(
+    symbol: str = Query(..., description="基金代码"),
+    limit: int = Query(default=120, ge=10, le=1000, description="返回条数"),
+) -> Dict[str, Any]:
+    normalized = normalize_symbol(symbol).zfill(6)
+    return {"symbol": normalized, "history": _load_fund_history_from_akshare(normalized, limit)}
+
+
+@app.get("/universe/refresh-hot", dependencies=[Depends(require_token)])
+def refresh_hot_universe(
+    limit: int = Query(default=10, ge=1, le=30, description="数量"),
+) -> Dict[str, Any]:
+    config = load_config()
+    funds = refresh_hot_funds(config, limit)
+    return {"updated": bool(funds), "funds": funds, "universe": load_config().get("universe", [])}
 
 
 def update_cash_value(cash: float) -> Dict[str, Any]:
@@ -349,6 +564,48 @@ def record_trade_legacy(request: TradeRequest) -> Dict[str, Any]:
 def list_trades() -> Dict[str, Any]:
     config = load_config()
     return {"transactions": config.get("transactions", [])}
+
+
+@app.get("/market/price-overrides", dependencies=[Depends(require_token)])
+def list_price_overrides() -> Dict[str, Any]:
+    config = load_config()
+    return {
+        "price_overrides": config.get("market_data", {}).get("price_overrides", {})
+    }
+
+
+@app.get("/market/price-overrides/upsert", dependencies=[Depends(require_token)])
+def upsert_price_override(
+    symbol: str = Query(..., description="基金代码"),
+    price: float = Query(..., gt=0, description="当前净值"),
+    previous_close: Optional[float] = Query(default=None, gt=0, description="上一净值"),
+    as_of_date: Optional[str] = Query(default=None, description="净值日期"),
+) -> Dict[str, Any]:
+    normalized = normalize_symbol(symbol)
+    config = load_config()
+    overrides = config.setdefault("market_data", {}).setdefault("price_overrides", {})
+    item: Dict[str, Any] = {"price": price}
+    if previous_close:
+        item["previous_close"] = previous_close
+    if as_of_date:
+        item["as_of_date"] = as_of_date
+    overrides[normalized] = item
+    save_config(config)
+    return {"symbol": normalized, "price_override": item}
+
+
+@app.get("/market/price-overrides/delete", dependencies=[Depends(require_token)])
+def delete_price_override(
+    symbol: str = Query(..., description="基金代码"),
+) -> Dict[str, Any]:
+    normalized = normalize_symbol(symbol)
+    config = load_config()
+    overrides = config.setdefault("market_data", {}).setdefault("price_overrides", {})
+    if normalized not in overrides:
+        raise HTTPException(status_code=404, detail="Price override not found")
+    del overrides[normalized]
+    save_config(config)
+    return {"deleted": normalized}
 
 
 @app.get("/analysis/run", dependencies=[Depends(require_token)])

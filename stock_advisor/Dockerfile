@@ -10,5 +10,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com -r requirements.txt
 
 COPY stock_advisor ./stock_advisor
+RUN rm -f ./stock_advisor/config.json
 
 CMD ["uvicorn", "stock_advisor.api:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,8 +1,11 @@
 __pycache__/
 *.py[cod]
+.DS_Store
+.codegraph/
 .venv/
 venv/
 snake/leaderboard.json
 stock_advisor/config.json
 stock_advisor/reports/
+stock_advisor/scripts/deploy_aliyun.sh
 .env

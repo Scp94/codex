@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>基金理财助手</title>
+  <link rel="stylesheet" href="/static/admin.css?v=20260607-held-metrics">
+</head>
+<body class="login-page">
+  <main class="login-panel">
+    <h1>基金理财助手</h1>
+    {{ error }}
+    <form action="/admin" method="get">
+      <label for="token">访问令牌</label>
+      <input id="token" name="token" type="password" autocomplete="current-password" autofocus>
+      <button type="submit">登录</button>
+    </form>
+  </main>
+</body>
+</html>
