@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Server Monitor</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">SM</span>
+          <div>
+            <strong>Server Monitor</strong>
+            <small id="hostName">connecting</small>
+          </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="主导航">
+          <button class="nav-tab active" data-tab="overview">概览</button>
+          <button class="nav-tab" data-tab="containers">容器</button>
+          <button class="nav-tab" data-tab="metrics">指标</button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <label class="toggle-line">
+            <input id="autoRefreshToggle" type="checkbox" checked />
+            <span>自动刷新</span>
+          </label>
+          <label class="field-label" for="refreshInterval">间隔</label>
+          <select id="refreshInterval">
+            <option value="2000">2 秒</option>
+            <option value="5000" selected>5 秒</option>
+            <option value="10000">10 秒</option>
+          </select>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <h1>服务器监控</h1>
+            <p id="systemLine">等待采集</p>
+          </div>
+          <div class="toolbar">
+            <button class="secondary-button" id="tokenButton" type="button">令牌</button>
+            <button class="primary-button" id="refreshButton" type="button">刷新</button>
+          </div>
+        </header>
+
+        <section class="status-strip" aria-label="关键状态">
+          <article class="metric-card tone-cpu">
+            <span>CPU</span>
+            <strong id="cpuValue">--</strong>
+            <small id="loadValue">load --</small>
+          </article>
+          <article class="metric-card tone-memory">
+            <span>内存</span>
+            <strong id="memoryValue">--</strong>
+            <small id="memoryBytes">--</small>
+          </article>
+          <article class="metric-card tone-disk">
+            <span>磁盘</span>
+            <strong id="diskValue">--</strong>
+            <small id="diskBytes">--</small>
+          </article>
+          <article class="metric-card tone-docker">
+            <span>Docker</span>
+            <strong id="dockerValue">--</strong>
+            <small id="dockerState">--</small>
+          </article>
+        </section>
+
+        <section class="tab-panel active" id="overviewPanel">
+          <div class="grid two-columns">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>资源趋势</h2>
+                <span id="lastRefresh">--</span>
+              </div>
+              <canvas id="resourceChart" height="260"></canvas>
+              <div class="legend">
+                <span><i class="swatch cpu"></i>CPU</span>
+                <span><i class="swatch memory"></i>内存</span>
+                <span><i class="swatch disk"></i>磁盘</span>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>容器状态</h2>
+                <span id="readOnlyBadge">可操作</span>
+              </div>
+              <div class="state-grid" id="containerStateGrid"></div>
+              <div class="compact-list" id="recentContainers"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="containersPanel">
+          <section class="panel">
+            <div class="panel-heading table-heading">
+              <div>
+                <h2>Docker 容器</h2>
+                <span id="containerCount">--</span>
+              </div>
+              <div class="table-tools">
+                <input id="containerSearch" type="search" placeholder="搜索容器、镜像、状态" />
+                <select id="stateFilter">
+                  <option value="all">全部状态</option>
+                  <option value="running">running</option>
+                  <option value="exited">exited</option>
+                  <option value="paused">paused</option>
+                  <option value="created">created</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>名称</th>
+                    <th>镜像</th>
+                    <th>状态</th>
+                    <th>端口</th>
+                    <th>项目</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="containerTableBody">
+                  <tr>
+                    <td colspan="6" class="empty-cell">等待 Docker 数据</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="metricsPanel">
+          <div class="grid two-columns">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>磁盘</h2>
+              </div>
+              <div id="diskList" class="meter-list"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>网络</h2>
+                <span id="networkRate">--</span>
+              </div>
+              <div class="table-wrap small">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>接口</th>
+                      <th>接收</th>
+                      <th>发送</th>
+                      <th>错误</th>
+                    </tr>
+                  </thead>
+                  <tbody id="networkTableBody">
+                    <tr>
+                      <td colspan="4" class="empty-cell">等待网络数据</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="tokenModal" hidden>
+      <form class="modal" id="tokenForm">
+        <h2>API 令牌</h2>
+        <input id="tokenInput" type="password" autocomplete="current-password" placeholder="Bearer token" />
+        <div class="modal-actions">
+          <button type="button" class="secondary-button" id="clearTokenButton">清除</button>
+          <button type="button" class="secondary-button" id="closeTokenButton">取消</button>
+          <button type="submit" class="primary-button">保存</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
+

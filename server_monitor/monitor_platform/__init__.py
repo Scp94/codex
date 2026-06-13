@@ -1,0 +1,2 @@
+"""Server monitoring platform package."""
+
