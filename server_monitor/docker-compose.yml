@@ -1,0 +1,23 @@
+services:
+  server-monitor:
+    build:
+      context: .
+    image: server-monitor:latest
+    container_name: server-monitor
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      MONITOR_API_TOKEN: "${MONITOR_API_TOKEN:?set MONITOR_API_TOKEN in .env}"
+      MONITOR_READ_ONLY: "${MONITOR_READ_ONLY:-false}"
+      MONITOR_PROC_ROOT: /host/proc
+      MONITOR_SYS_ROOT: /host/sys
+      MONITOR_DISK_PATHS: /host/root
+      DOCKER_SOCKET: /var/run/docker.sock
+    ports:
+      - "${MONITOR_PORT:-8080}:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+
